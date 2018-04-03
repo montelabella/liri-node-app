@@ -76,6 +76,47 @@ function getSpotify(searchItem) {
         console.log(result);
         logResults('\nCommand: ' + command + ' ' + secondArg + '\n' + result)
     });
+}
 
 
+
+function movieThis(searchItem){
+    var movie = searchItem ? searchItem : "Remember%20the%20Titans" //I hated Mr. Nobody so we're not using that shit
+    var endpoint = 'https://www.omdbapi.com/?apikey=trilogy&t=' + movie
+    var secondArg = searchTerm ? searchTerm : '' //accurately log command line entry
+    request.get(endpoint, function(err,res,body) {
+        if(err){
+            return console.log(err)
+        }
+        body = JSON.parse(body) //turn string response to JSON so it can be referenced
+        
+        var result = '* ' + body.Title + '\n' +
+        '* ' + body.Year + '\n' +
+        '* IMDB rating: ' + body.Ratings[0].Value + '\n' +
+        '* Rotten Tomatoes rating: ' + body.Ratings[1].Value + '\n' +
+        '* ' + body.Country + '\n' +
+        '* ' + body.Language + '\n' +
+        '* ' + body.Plot + '\n' +
+        '* ' + body.Actors + '\n'
+        console.log(result)
+        logResults('\nCommand: ' + command + ' ' + secondArg + '\n' + result)
+    })
+}
+function readTheFile () {
+    fs.readFile('random.txt', 'utf-8', function(error, data){
+        if (error) {
+            return console.log(error);
+        }
+        var dataArr = data.split(',')
+        var comm = dataArr[0]
+        var search = dataArr[1]
+        doCommand(comm, search)
+    })
+}
+function logResults (text) {
+    fs.appendFile('log.txt', text, function(err){
+        if(err){
+            return console.log(error)
+        }
+    } )
 }
