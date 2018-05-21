@@ -4,7 +4,7 @@ require("dotenv").config();
 // imports keys to js files
 var keys = require('./keys.js');
 var Twitter = require('twitter');
-var Spotify = require('node-spotify-api');
+var spotify = require('spotify');
 var request = require("request");
 var fs = require('fs');
 
@@ -12,111 +12,100 @@ var command = process.argv[2]
 var selection = process.argv[3];
 var liriNode = (command, selection);
 
-
-function liriNode(command, selection) {
-    switch (command) {
-        case 'my-tweets':
-            getTwitter();
-            break;
-
-        case 'spotify-this-song':
-            getSpotify(selection);
-            break;
-
-        case 'movie-this':
-            getMovie(selection);
-            break;
-
-        case 'do-what-it-says':
-            readFile();
-            break;
-
-        default:
-            console.log('"' + command + '" command not recognized');
-            break;
-
-    }
-};
-
-function getTwitter() {
-    var twitterKey = new Twitter(keys.twitter);
-    twitterKey.get('statuses/user_timeline', function (error, tweets, response) {
-        if (error) {
-            return console.log(error)
+var getMyTweets = function () {
+    var client = new Twitter(keys.twitter);
+    var params = {
+        screen_name: 'inrtracker'
+    };
+    client.get('statuses/usere_timeline', params, function (error, tweets, response) {
+        if (!error) {
+            for (var i = 0; i < tweets.length; i++) {
+                console.log(tweets[i].created_at);
+                console.log(" ");
+                console.log(tweets[i].text);
+            }
         }
-        tweetResults('\nCommand: ' + command + '\n')
-        tweets.forEach(function (tweet) {
-            console.log('* ' + tweet.text)
-            tweetResults('* ' + tweet.text + '\n')
-        })
+    });
 
-    })
-};
-
-function getSpotify(searchItem) {
-    var spotify = new Spotify(keys.spotify)
-    var query = searchItem ? searchItem : 'The Sign',
-        trackNum = searchItem ? 0 : 5
-    var secondArg = searchTerm ? searchTerm : ''
+var getArtistNames = function(artist) {
+    return artist.name;
+}
+}
+var getMeSpotify = function (songName) {
     spotify.search({
         type: 'track',
-        query: query
+        query: song
     }, function (err, data) {
         if (err) {
-            return console.log('Error occurred: ' + err);
+            console.log("error occurred: " + err);
+            return;
         }
-        var track = data.tracks.items[trackNum]
-        var album = track.album.name;
-        var artist = track.artists[0].name;
-        var ext_url = track.external_urls.spotify;
-        var song = track.name;
-        var result = '* ' + artist + '\n* ' + song + '\n* ' + ext_url + '\n* ' + album +
-            '\n'
-
-        console.log(result);
-        logResults('\nCommand: ' + command + ' ' + secondArg + '\n' + result)
+        var songs  = data.tracks.items;
+        for(var i=0; i<songs.length; i++) {
+            console.log(i);
+            console.log('song name: ' + songs[i].name);
+            cconsole.log('album: ' + songs[i].album.name);
+            console.log('-----------------------------------');
+        }
+        
     });
 }
 
+var getMeMovie = function(movieName){
+    
+   request('https://www.omdbapi.com/?apikey=trilogy&t=' + movieName + ' &y=&plot=short&r=json'
+, function(error, res, body) {
+    if (!error && res.statusCode == 200) {
+        var jsonData = JSON.parse(body);
+
+        console.log('Title: ' + jsonData.Title);
+        console.log('Year: ' + jsonData.Year);
+        console.log('Rated: ' + jsonData.Rated);
+        console.log('Country: ' + jsonData.Country);
+        console.log('Language: ' + jsonData.Language);
+        console.log('Plot: ' + jsonData.Plot);
+        console.log('Actors: ' + jsonData.Actors);
+        console.log('')
+    }
+});
+}  
+var doWhatItSays = function() {
+    fs.readFile('random.txt', 'utf8', function(err,data){
+        if(err) throw err;
+        var dataArr = data.split(',');
+        if (dataArr.length == 2) {
+            pick(dataArr[0], dataArr[1]);
+
+        } else if(dataArr.length == 1) {
+            pick(dataArr[0]);
+        }
+ 
+
+}); 
+}   
+    
 
 
-function movieThis(searchItem){
-    var movie = searchItem ? searchItem : "Remember%20the%20Titans" //I hated Mr. Nobody so we're not using that shit
-    var endpoint = 'https://www.omdbapi.com/?apikey=trilogy&t=' + movie
-    var secondArg = searchTerm ? searchTerm : '' //accurately log command line entry
-    request.get(endpoint, function(err,res,body) {
-        if(err){
-            return console.log(err)
-        }
-        body = JSON.parse(body) //turn string response to JSON so it can be referenced
-        
-        var result = '* ' + body.Title + '\n' +
-        '* ' + body.Year + '\n' +
-        '* IMDB rating: ' + body.Ratings[0].Value + '\n' +
-        '* Rotten Tomatoes rating: ' + body.Ratings[1].Value + '\n' +
-        '* ' + body.Country + '\n' +
-        '* ' + body.Language + '\n' +
-        '* ' + body.Plot + '\n' +
-        '* ' + body.Actors + '\n'
-        console.log(result)
-        logResults('\nCommand: ' + command + ' ' + secondArg + '\n' + result)
-    })
+var pick = function (caseData, functionData) {
+    switch (caseData) {
+        case 'my-tweets':
+            getMyTweets();
+            break;
+        case 'spotify-this-song':
+            getMeSpotify(functionData);
+            break;
+        case 'movie-this':
+        getMeMovie(functionData);
+        case 'do-what-it-says':
+        doWhatItSays();
+        break;
+        default:
+            console.log('LIRI does not know that');
+    }
 }
-function readTheFile () {
-    fs.readFile('random.txt', 'utf-8', function(error, data){
-        if (error) {
-            return console.log(error);
-        }
-        var dataArr = data.split(',')
-        var comm = dataArr[0]
-        var search = dataArr[1]
-        doCommand(comm, search)
-    })
-}
-function logResults (text) {
-    fs.appendFile('log.txt', text, function(err){
-        if(err){
-            return console.log(error)
-        }
-    } )
-}
+var runThis = function (argOne, argTwo) {
+    pick(argOne, argTwo);
+};
+runThis(process.argv[2], process.argv[3]);
+
+
